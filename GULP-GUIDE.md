@@ -192,3 +192,26 @@
         .pipe(gulp.dest('build/img'));
   };
 ```
+12. Конвертирует шрифты в woff и woff2 в папке source.
+
+```js
+const fonts = () => {
+  return gulp.src('source/fonts/*.{otf,ttf}')
+  .pipe(plumber(
+    notify.onError({
+        title: "FONTS",
+        message: "Error: <%= error.message %>"
+    })
+))
+    .pipe(fonter({
+      formats: ['woff']
+    }))
+    .pipe(gulp.dest('./source/fonts/'))
+    .pipe(gulp.src('source/fonts/*.ttf'))
+    .pipe(ttf2woff2({
+      clone: true
+    }))
+    .pipe(gulp.dest('./source/fonts/'))
+
+};
+```

@@ -16,76 +16,110 @@ const webpackConfig = require('./webpack.config.js');
 const pug = require('gulp-pug');
 const cached = require('gulp-cached');
 const gcmq = require('gulp-group-css-media-queries');
+const notify = require('gulp-notify');
+const fonter = require('gulp-fonter');
+const ttf2woff2 = require('gulp-ttf2woff2');
 
 const pugToHtml = () => {
   return gulp.src('source/pug/pages/*.pug')
-      .pipe(plumber())
-      .pipe(pug({ pretty: true }))
-      .pipe(cached('pug'))
-      .pipe(gulp.dest('build'));
+    .pipe(plumber(
+      notify.onError({
+        title: "PUG",
+        message: "Error: <%= error.message %>"
+      })
+    ))
+    .pipe(pug({ pretty: true }))
+    .pipe(cached('pug'))
+    .pipe(gulp.dest('build'));
 };
 
 const css = () => {
   return gulp.src('source/sass/style.scss')
-      .pipe(plumber())
-      .pipe(sourcemap.init())
-      .pipe(sass())
-      .pipe(postcss([autoprefixer({
-        grid: true,
-      })]))
-      .pipe(gcmq()) // выключите, если в проект импортятся шрифты через ссылку на внешний источник
-      .pipe(gulp.dest('build/css'))
-      .pipe(csso())
-      .pipe(rename('style.min.css'))
-      .pipe(sourcemap.write('.'))
-      .pipe(gulp.dest('build/css'))
-      .pipe(server.stream());
+    .pipe(plumber(
+      notify.onError({
+        title: "PUG",
+        message: "Error: <%= error.message %>"
+      })
+    ))
+    .pipe(sourcemap.init())
+    .pipe(sass())
+    .pipe(postcss([autoprefixer({
+      grid: true,
+    })]))
+    .pipe(gcmq()) // выключите, если в проект импортятся шрифты через ссылку на внешний источник
+    .pipe(gulp.dest('build/css'))
+    .pipe(csso())
+    .pipe(rename('style.min.css'))
+    .pipe(sourcemap.write('.'))
+    .pipe(gulp.dest('build/css'))
+    .pipe(server.stream());
 };
 
 const js = () => {
   return gulp.src(['source/js/main.js'])
-      .pipe(webpackStream(webpackConfig))
-      .pipe(gulp.dest('build/js'))
+    .pipe(webpackStream(webpackConfig))
+    .pipe(gulp.dest('build/js'))
 };
+
+
+const fonts = () => {
+  return gulp.src('source/fonts/*.{otf,ttf}')
+  .pipe(plumber(
+    notify.onError({
+        title: "FONTS",
+        message: "Error: <%= error.message %>"
+    })
+))
+    .pipe(fonter({
+      formats: ['woff']
+    }))
+    .pipe(gulp.dest('./source/fonts/'))
+    .pipe(gulp.src('source/fonts/*.ttf'))
+    .pipe(ttf2woff2({
+      clone: true
+    }))
+    .pipe(gulp.dest('./source/fonts/'))
+
+}
 
 const svgo = () => {
   return gulp.src('source/img/**/*.{svg}')
-      .pipe(imagemin([
-        imagemin.svgo({
-            plugins: [
-              {removeViewBox: false},
-              {removeRasterImages: true},
-              {removeUselessStrokeAndFill: false},
-            ]
-          }),
-      ]))
-      .pipe(gulp.dest('source/img'));
+    .pipe(imagemin([
+      imagemin.svgo({
+        plugins: [
+          { removeViewBox: false },
+          { removeRasterImages: true },
+          { removeUselessStrokeAndFill: false },
+        ]
+      }),
+    ]))
+    .pipe(gulp.dest('source/img'));
 };
 
 const sprite = () => {
   return gulp.src('source/img/sprite/*.svg')
-      .pipe(svgstore({inlineSvg: true}))
-      .pipe(rename('sprite_auto.svg'))
-      .pipe(gulp.dest('build/img'));
+    .pipe(svgstore({ inlineSvg: true }))
+    .pipe(rename('sprite_auto.svg'))
+    .pipe(gulp.dest('build/img'));
 };
 
 const copySvg = () => {
-  return gulp.src('source/img/**/*.svg', {base: 'source'})
-      .pipe(gulp.dest('build'));
+  return gulp.src('source/img/**/*.svg', { base: 'source' })
+    .pipe(gulp.dest('build'));
 };
 
 const copyImages = () => {
-  return gulp.src('source/img/**/*.{png,jpg,webp}', {base: 'source'})
-      .pipe(gulp.dest('build'));
+  return gulp.src('source/img/**/*.{png,jpg,webp}', { base: 'source' })
+    .pipe(gulp.dest('build'));
 };
 
 const optimizeImages = () => {
   return gulp.src('build/img/**/*.{png,jpg}')
-      .pipe(imagemin([
-        imagemin.optipng({optimizationLevel: 3}),
-        imagemin.mozjpeg({quality: 75, progressive: true}),
-      ]))
-      .pipe(gulp.dest('build/img'));
+    .pipe(imagemin([
+      imagemin.optipng({ optimizationLevel: 3 }),
+      imagemin.mozjpeg({ quality: 75, progressive: true }),
+    ]))
+    .pipe(gulp.dest('build/img'));
 };
 
 // Используйте отличное от дефолтного значение root, если нужно обработать отдельную папку в img,
@@ -97,13 +131,13 @@ const optimizeImages = () => {
 const createWebp = () => {
   const root = '';
   return gulp.src(`source/img/${root}**/*.{png,jpg}`)
-    .pipe(webp({quality: 90}))
+    .pipe(webp({ quality: 90 }))
     .pipe(gulp.dest(`source/img/${root}`));
 };
 
 const copy = () => {
   return gulp.src([
-    'source/fonts/**',
+    'source/fonts/*.{woff,woff2}',
     'source/img/**',
     'source/data/**',
     'source/favicon/**',
@@ -113,7 +147,7 @@ const copy = () => {
   ], {
     base: 'source',
   })
-      .pipe(gulp.dest('build'));
+    .pipe(gulp.dest('build'));
 };
 
 const clean = () => {
@@ -151,6 +185,7 @@ const start = gulp.series(clean, svgo, copy, css, sprite, js, pugToHtml, syncSer
 
 const build = gulp.series(clean, svgo, copy, css, sprite, js, pugToHtml, optimizeImages);
 
+exports.fonts = fonts;
 exports.imagemin = optimizeImages;
 exports.webp = createWebp;
 exports.start = start;
